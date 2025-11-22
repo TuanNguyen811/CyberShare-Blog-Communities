@@ -62,6 +62,8 @@ export default function DashboardPage() {
         return 'bg-yellow-100 text-yellow-800';
       case 'ARCHIVED':
         return 'bg-red-100 text-red-800';
+      case 'HIDDEN':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -109,6 +111,13 @@ export default function DashboardPage() {
               Drafts
             </Button>
             <Button
+              variant={statusFilter === 'PENDING_REVIEW' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('PENDING_REVIEW')}
+              size="sm"
+            >
+              Pending Review
+            </Button>
+            <Button
               variant={statusFilter === 'ARCHIVED' ? 'default' : 'outline'}
               onClick={() => setStatusFilter('ARCHIVED')}
               size="sm"
@@ -139,7 +148,7 @@ export default function DashboardPage() {
             </h3>
             <p className="text-gray-500 mb-6">
               {statusFilter
-                ? `You don't have any ${statusFilter.toLowerCase()} posts.`
+                ? `You don't have any ${statusFilter.toLowerCase().replace('_', ' ')} posts.`
                 : 'Start writing your first story!'}
             </p>
             <Button asChild>
@@ -167,7 +176,7 @@ export default function DashboardPage() {
                           post.status
                         )}`}
                       >
-                        {post.status}
+                        {post.status.replace('_', ' ')}
                       </span>
                     </div>
 

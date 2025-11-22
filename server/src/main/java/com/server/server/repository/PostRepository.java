@@ -24,6 +24,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     
     Page<Post> findByAuthorId(Long authorId, Pageable pageable);
     
+    Page<Post> findByAuthorUsernameAndStatus(String username, PostStatus status, Pageable pageable);
+    
     @Query("SELECT p FROM Post p WHERE p.author.id = :authorId AND " +
            "(:status IS NULL OR p.status = :status)")
     Page<Post> findByAuthorIdAndOptionalStatus(

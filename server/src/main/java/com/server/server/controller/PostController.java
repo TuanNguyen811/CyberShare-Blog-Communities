@@ -7,6 +7,7 @@ import com.server.server.dto.post.PostListDto;
 import com.server.server.dto.post.UpdatePostRequest;
 import com.server.server.security.UserPrincipal;
 import com.server.server.service.PostService;
+import com.server.server.service.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -25,9 +31,11 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
     
     private final PostService postService;
+    private final FileStorageService fileStorageService;
     
-    public PostController(PostService postService) {
+    public PostController(PostService postService, FileStorageService fileStorageService) {
         this.postService = postService;
+        this.fileStorageService = fileStorageService;
     }
     
     @PostMapping
@@ -89,8 +97,9 @@ public class PostController {
     }
     
     @GetMapping
-    @Operation(summary = "Get published posts", description = "Get paginated list of published posts")
-    public ResponseEntity<Page<PostListDto>> getPublishedPosts(
+    @Operation(summary = "Get public posts", description = "Get paginated list of public posts, optionally filtered by author username")
+    public ResponseEntity<Page<PostListDto>> getPublicPosts(
+            @RequestParam(required = false) String author,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "publishedAt,desc") String sort) {
@@ -99,7 +108,11 @@ public class PostController {
         Sort sortOrder = Sort.by(Sort.Direction.fromString(sortParams[1]), sortParams[0]);
         Pageable pageable = PageRequest.of(page, size, sortOrder);
         
-        return ResponseEntity.ok(postService.getPublishedPosts(pageable));
+        if (author != null && !author.isEmpty()) {
+            return ResponseEntity.ok(postService.getPostsByAuthorUsername(author, PostStatus.PUBLISHED, pageable));
+        }
+
+        return ResponseEntity.ok(postService.getPublicPosts(pageable));
     }
     
     @GetMapping("/my-posts")
@@ -121,5 +134,38 @@ public class PostController {
         Pageable pageable = PageRequest.of(page, size, sortOrder);
         
         return ResponseEntity.ok(postService.getMyPosts(userPrincipal.getId(), status, pageable));
+    }
+    
+    @PostMapping("/upload-image")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Upload post image", description = "Upload an image for post content or cover (authenticated users only)")
+    public ResponseEntity<Map<String, String>> uploadPostImage(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam("file") MultipartFile file) {
+        
+        if (userPrincipal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        
+        // Validate file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new RuntimeException("Only image files are allowed");
+        }
+        
+        // Store file
+        String fileName = fileStorageService.storePostImage(file);
+        
+        // Build file URL
+        String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/uploads/posts/")
+                .path(fileName)
+                .toUriString();
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("fileName", fileName);
+        response.put("fileUrl", fileUrl);
+        
+        return ResponseEntity.ok(response);
     }
 }

@@ -65,6 +65,8 @@ public class SecurityConfig {
                 // Public endpoints - Posts (read-only: GET requests only)
                 .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                // Public endpoints - Users (read-only: GET by username only)
+                .requestMatchers(HttpMethod.GET, "/api/users/{username}").permitAll()
                 // All other requests need authentication
                 .anyRequest().authenticated()
             )

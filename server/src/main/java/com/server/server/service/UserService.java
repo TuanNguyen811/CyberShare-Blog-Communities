@@ -22,6 +22,12 @@ public class UserService {
         return UserDto.fromEntity(user);
     }
 
+    public UserDto getUserByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+        return UserDto.fromEntity(user);
+    }
+
     @Transactional
     public UserDto updateUser(Long id, UpdateProfileRequest request) {
         User user = userRepository.findById(id)
@@ -33,6 +39,9 @@ public class UserService {
         }
         if (request.getBio() != null) {
             user.setBio(request.getBio());
+        }
+        if (request.getAbout() != null) {
+            user.setAbout(request.getAbout());
         }
         if (request.getAvatarUrl() != null) {
             user.setAvatarUrl(request.getAvatarUrl());

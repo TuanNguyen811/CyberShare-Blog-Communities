@@ -15,20 +15,32 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
-    private final Path fileStorageLocation;
+    private final Path avatarStorageLocation;
+    private final Path postImageStorageLocation;
 
     public FileStorageService(FileStorageProperties fileStorageProperties) {
-        this.fileStorageLocation = Paths.get(fileStorageProperties.getDir())
+        this.avatarStorageLocation = Paths.get(fileStorageProperties.getDir())
+                .toAbsolutePath().normalize();
+        this.postImageStorageLocation = Paths.get("uploads/posts")
                 .toAbsolutePath().normalize();
 
         try {
-            Files.createDirectories(this.fileStorageLocation);
+            Files.createDirectories(this.avatarStorageLocation);
+            Files.createDirectories(this.postImageStorageLocation);
         } catch (Exception ex) {
             throw new RuntimeException("Could not create the directory where the uploaded files will be stored.", ex);
         }
     }
 
     public String storeFile(MultipartFile file) {
+        return storeFile(file, avatarStorageLocation);
+    }
+    
+    public String storePostImage(MultipartFile file) {
+        return storeFile(file, postImageStorageLocation);
+    }
+    
+    private String storeFile(MultipartFile file, Path storageLocation) {
         // Normalize file name
         String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
         
@@ -46,7 +58,7 @@ public class FileStorageService {
             String newFileName = UUID.randomUUID().toString() + fileExtension;
 
             // Copy file to the target location (Replacing existing file with the same name)
-            Path targetLocation = this.fileStorageLocation.resolve(newFileName);
+            Path targetLocation = storageLocation.resolve(newFileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             return newFileName;
@@ -56,8 +68,16 @@ public class FileStorageService {
     }
 
     public void deleteFile(String fileName) {
+        deleteFile(fileName, avatarStorageLocation);
+    }
+    
+    public void deletePostImage(String fileName) {
+        deleteFile(fileName, postImageStorageLocation);
+    }
+    
+    private void deleteFile(String fileName, Path storageLocation) {
         try {
-            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            Path filePath = storageLocation.resolve(fileName).normalize();
             Files.deleteIfExists(filePath);
         } catch (IOException ex) {
             throw new RuntimeException("Could not delete file " + fileName + ". Please try again!", ex);

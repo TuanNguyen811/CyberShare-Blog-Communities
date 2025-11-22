@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
@@ -7,7 +7,8 @@ import SimpleMDE from 'react-simplemde-editor';
 import 'easymde/dist/easymde.min.css';
 import { Save, Send, X, Upload, Image as ImageIcon } from 'lucide-react';
 
-export default function WritePage() {
+export default function EditPostPage() {
+  const { id } = useParams();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
@@ -16,8 +17,10 @@ export default function WritePage() {
   const [categoryId, setCategoryId] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [coverImageFile, setCoverImageFile] = useState(null);
+  const [currentStatus, setCurrentStatus] = useState('DRAFT');
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   
@@ -30,20 +33,44 @@ export default function WritePage() {
       return;
     }
 
-    // Fetch categories
-    const fetchCategories = async () => {
-      try {
-        const response = await apiClient.get('/api/categories');
-        setCategories(response.data);
-      } catch (err) {
-        console.error('Failed to fetch categories:', err);
-      }
-    };
-
+    fetchPost();
     fetchCategories();
-  }, [isAuthenticated, navigate]);
+  }, [id, isAuthenticated, navigate]);
 
-  // Upload image to server
+  const fetchPost = async () => {
+    try {
+      const response = await apiClient.get(`/api/posts/${id}`);
+      const post = response.data;
+      
+      // Check if user is the author
+      if (post.authorId !== user.id) {
+        alert('You are not authorized to edit this post');
+        navigate('/dashboard');
+        return;
+      }
+
+      setTitle(post.title);
+      setContent(post.content);
+      setCategoryId(post.categoryId?.toString() || '');
+      setCoverImageUrl(post.coverImageUrl || '');
+      setCurrentStatus(post.status);
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to fetch post:', err);
+      setError(err.response?.data?.message || 'Failed to load post');
+      setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await apiClient.get('/api/categories');
+      setCategories(response.data);
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+
   const uploadImage = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -61,18 +88,15 @@ export default function WritePage() {
     }
   };
 
-  // Handle cover image file selection
   const handleCoverImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file');
       return;
     }
 
-    // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('Image size must be less than 5MB');
       return;
@@ -92,7 +116,6 @@ export default function WritePage() {
     }
   };
 
-  // Custom image upload for markdown editor
   const imageUploadFunction = async (file, onSuccess, onError) => {
     try {
       const imageUrl = await uploadImage(file);
@@ -130,7 +153,7 @@ export default function WritePage() {
     };
   }, []);
 
-  const handleSaveDraft = async () => {
+  const handleUpdate = async (status) => {
     if (!title.trim()) {
       setError('Title is required');
       return;
@@ -141,7 +164,7 @@ export default function WritePage() {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     setError('');
 
     try {
@@ -150,58 +173,52 @@ export default function WritePage() {
         content: content.trim(),
         categoryId: categoryId ? parseInt(categoryId) : null,
         coverImageUrl: coverImageUrl.trim() || null,
-        status: 'DRAFT',
+        status: status,
       };
 
-      await apiClient.post('/api/posts', postData);
-      navigate('/dashboard');
+      const response = await apiClient.patch(`/api/posts/${id}`, postData);
+      
+      if (status === 'PUBLISHED') {
+        navigate(`/post/${response.data.slug}`);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
-      console.error('Failed to save draft:', err);
-      setError(err.response?.data?.message || 'Failed to save draft');
+      console.error('Failed to update post:', err);
+      setError(err.response?.data?.message || 'Failed to update post');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handlePublish = async () => {
-    if (!title.trim()) {
-      setError('Title is required');
-      return;
-    }
-
-    if (!content.trim()) {
-      setError('Content is required');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const postData = {
-        title: title.trim(),
-        content: content.trim(),
-        categoryId: categoryId ? parseInt(categoryId) : null,
-        coverImageUrl: coverImageUrl.trim() || null,
-        status: 'PUBLISHED',
-      };
-
-      const response = await apiClient.post('/api/posts', postData);
-      navigate(`/post/${response.data.slug}`);
-    } catch (err) {
-      console.error('Failed to publish:', err);
-      setError(err.response?.data?.message || 'Failed to publish post');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading post...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Write a New Story</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold">Edit Story</h1>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              currentStatus === 'PUBLISHED' ? 'bg-green-100 text-green-800' :
+              currentStatus === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
+              currentStatus === 'PENDING_REVIEW' ? 'bg-yellow-100 text-yellow-800' :
+              currentStatus === 'ARCHIVED' ? 'bg-red-100 text-red-800' :
+              'bg-orange-100 text-orange-800'
+            }`}>
+              {currentStatus.replace('_', ' ')}
+            </span>
+          </div>
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <X className="h-5 w-5" />
           </Button>
@@ -224,7 +241,7 @@ export default function WritePage() {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
               className="w-full text-4xl font-bold border-none outline-none focus:ring-0 placeholder-gray-300"
-              disabled={loading}
+              disabled={saving}
             />
           </div>
 
@@ -238,7 +255,7 @@ export default function WritePage() {
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={loading}
+                disabled={saving}
               >
                 <option value="">Select a category</option>
                 {categories.map((cat) => (
@@ -265,7 +282,7 @@ export default function WritePage() {
                   type="button"
                   variant="outline"
                   onClick={() => coverImageInputRef.current?.click()}
-                  disabled={loading || uploading}
+                  disabled={saving || uploading}
                   className="gap-2"
                 >
                   <Upload className="h-4 w-4" />
@@ -307,16 +324,20 @@ export default function WritePage() {
           <div className="flex items-center justify-end space-x-3 pt-4 border-t">
             <Button
               variant="outline"
-              onClick={handleSaveDraft}
-              disabled={loading}
+              onClick={() => handleUpdate('DRAFT')}
+              disabled={saving}
               className="gap-2"
             >
               <Save className="h-4 w-4" />
               Save Draft
             </Button>
-            <Button onClick={handlePublish} disabled={loading} className="gap-2">
+            <Button
+              onClick={() => handleUpdate('PUBLISHED')}
+              disabled={saving}
+              className="gap-2"
+            >
               <Send className="h-4 w-4" />
-              {loading ? 'Publishing...' : 'Publish'}
+              {saving ? 'Updating...' : currentStatus === 'PUBLISHED' ? 'Update & Publish' : 'Publish'}
             </Button>
           </div>
         </div>

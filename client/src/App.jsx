@@ -10,7 +10,10 @@ import AboutPage from './pages/AboutPage';
 import ExplorePage from './pages/ExplorePage';
 import ProfilePage from './pages/ProfilePage';
 import WritePage from './pages/WritePage';
+import EditPostPage from './pages/EditPostPage';
+import PostDetailPage from './pages/PostDetailPage';
 import DashboardPage from './pages/DashboardPage';
+import AuthorPage from './pages/AuthorPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -28,7 +31,12 @@ function App() {
             {/* Protected routes */}
             <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
+            <Route path="edit/:id" element={<ProtectedRoute><EditPostPage /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            
+            {/* Public post and author pages */}
+            <Route path="post/:slug" element={<PostDetailPage />} />
+            <Route path="author/:username" element={<AuthorPage />} />
             
             <Route path="*" element={<NotFoundPage />} />
           </Route>

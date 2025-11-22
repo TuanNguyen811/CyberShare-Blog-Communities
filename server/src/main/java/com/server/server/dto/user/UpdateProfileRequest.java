@@ -16,5 +16,8 @@ public class UpdateProfileRequest {
     @Size(max = 500, message = "Bio must not exceed 500 characters")
     private String bio;
 
+    @Size(max = 5000, message = "About must not exceed 5000 characters")
+    private String about;
+
     private String avatarUrl;
 }

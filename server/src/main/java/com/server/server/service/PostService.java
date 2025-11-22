@@ -64,7 +64,7 @@ public class PostService {
             post.setCategory(category);
         }
         
-        // Set published_at if publishing
+        // Set published_at if status is PUBLISHED
         if (post.getStatus() == PostStatus.PUBLISHED) {
             post.setPublishedAt(LocalDateTime.now());
         }
@@ -111,7 +111,7 @@ public class PostService {
             PostStatus oldStatus = post.getStatus();
             post.setStatus(request.getStatus());
             
-            // Set published_at when changing from non-published to published
+            // Set published_at when changing to PUBLISHED
             if (oldStatus != PostStatus.PUBLISHED && request.getStatus() == PostStatus.PUBLISHED) {
                 post.setPublishedAt(LocalDateTime.now());
             }
@@ -145,7 +145,7 @@ public class PostService {
         return mapToDto(post);
     }
     
-    public Page<PostListDto> getPublishedPosts(Pageable pageable) {
+    public Page<PostListDto> getPublicPosts(Pageable pageable) {
         return postRepository.findByStatus(PostStatus.PUBLISHED, pageable)
             .map(this::mapToListDto);
     }
@@ -156,6 +156,17 @@ public class PostService {
                 .map(this::mapToListDto);
         } else {
             return postRepository.findByAuthorId(authorId, pageable)
+                .map(this::mapToListDto);
+        }
+    }
+    
+    public Page<PostListDto> getPostsByAuthorUsername(String username, PostStatus status, Pageable pageable) {
+        if (status != null) {
+            return postRepository.findByAuthorUsernameAndStatus(username, status, pageable)
+                .map(this::mapToListDto);
+        } else {
+            // If no status specified, default to PUBLISHED for public author pages
+            return postRepository.findByAuthorUsernameAndStatus(username, PostStatus.PUBLISHED, pageable)
                 .map(this::mapToListDto);
         }
     }

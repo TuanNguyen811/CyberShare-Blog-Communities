@@ -12,6 +12,7 @@ export default function EditProfileModal({ user, onClose }) {
   const [profileData, setProfileData] = useState({
     displayName: user.displayName || '',
     bio: user.bio || '',
+    about: user.about || '',
     avatarUrl: user.avatarUrl || '',
   });
   const [avatarPreview, setAvatarPreview] = useState(user.avatarUrl || '');
@@ -189,19 +190,38 @@ export default function EditProfileModal({ user, onClose }) {
           {/* Bio */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bio
+              Bio (Short description)
             </label>
             <textarea
               name="bio"
               value={profileData.bio}
               onChange={handleChange}
-              rows={4}
+              rows={2}
               maxLength={500}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Tell us about yourself..."
+              placeholder="A short bio about yourself..."
             />
             <p className="text-xs text-gray-500 mt-1">
-              {profileData.bio.length}/500 characters
+              {profileData.bio.length}/500 characters • Displayed under your name
+            </p>
+          </div>
+
+          {/* About */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              About (Full description)
+            </label>
+            <textarea
+              name="about"
+              value={profileData.about}
+              onChange={handleChange}
+              rows={8}
+              maxLength={5000}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Write a longer description about yourself, your interests, or your work..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {profileData.about.length}/5000 characters • Displayed in About tab
             </p>
           </div>
 

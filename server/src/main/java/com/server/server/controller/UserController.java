@@ -39,6 +39,13 @@ public class UserController {
         return ResponseEntity.ok(userDto);
     }
 
+    @GetMapping("/{username}")
+    @Operation(summary = "Get user by username", description = "Get user profile information by username")
+    public ResponseEntity<UserDto> getUserByUsername(@PathVariable String username) {
+        UserDto userDto = userService.getUserByUsername(username);
+        return ResponseEntity.ok(userDto);
+    }
+
     @PatchMapping("/me")
     @Operation(summary = "Update current user profile", description = "Update authenticated user's profile information")
     public ResponseEntity<UserDto> updateCurrentUser(
