@@ -25,7 +25,7 @@ export default function WritePage() {
 
   const coverImageInputRef = useRef(null);
   const editorRef = useRef(null);
-
+//sửa lỗi bôi đậm trong markdown editor
   const patchMdeBoldBehavior = useCallback((mde) => {
     if (!mde || mde.__cybershareBoldPatched) return;
 
